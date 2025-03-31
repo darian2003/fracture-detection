@@ -151,7 +151,6 @@ def main(threshold=0.5, agg_type='prob_mean', alpha=0.75, gamma=2.0, num_epochs=
         scheduler=scheduler,
         num_epochs=num_epochs,
         device=device,
-        patience=7,
         threshold=threshold
     )
 

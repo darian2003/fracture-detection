@@ -64,7 +64,7 @@ class MURAClassifier(nn.Module):
         
         features = torch.flatten(features, 1)  # Flatten to [B, C]
         logits = self.classifier(features)
-        
+
         return logits
 
     def forward(self, x_list):
@@ -85,8 +85,6 @@ class MURAClassifier(nn.Module):
                 img = img.unsqueeze(0)  # Add batch dimension
                 logit = self.forward_single_image(img)
                 image_logits.append(logit)
-                
-            print(f'Image logits: {image_logits}')
 
             # Stack all image logits
             image_logits = torch.cat(image_logits, dim=0)  # [num_images, 1]
@@ -112,9 +110,6 @@ class MURAClassifier(nn.Module):
 
             all_study_outputs.append(study_output)
 
-        print(f'All study outputs: {all_study_outputs}')
-        # Stack all study outputs
-        print(f'All study outputs stacked: {torch.cat(all_study_outputs, dim=0)}')
         return torch.cat(all_study_outputs, dim=0)
 
 # 4. Focal Loss for better handling of class imbalance
@@ -133,7 +128,7 @@ class FocalLoss(nn.Module):
 
 # 5. Training Function
 def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler=None,
-               num_epochs=15, device='cuda', patience=7, threshold=0.5):
+               num_epochs=15, device='cuda', threshold=0.5):
 
     model = model.to(device)
     best_val_loss = float('inf')
@@ -221,9 +216,9 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
         print(f"Train Loss: {train_loss:.4f}, Acc: {train_acc:.4f}, AUC: {train_auc:.4f}, F1: {train_f1:.4f}")
         print(f"Val Loss: {val_loss:.4f}, Acc: {val_acc:.4f}, AUC: {val_auc:.4f}, F1: {val_f1:.4f}")
 
-        # Early stopping and model saving
+        # Model saving
         if val_loss < best_val_loss:
-            best_val_loss = val_loss
+            best_val_loss = valx_loss
             best_model_wts = model.state_dict().copy()
             best_val_metrics = val_metrics.copy()
 
