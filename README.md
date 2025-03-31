@@ -13,7 +13,7 @@ Defineste modelul folosit si functiile de antrenare/evaluare. In cazul baseline-
 - Loss: WBCE (implementat cu Focal Loss)
 
 ## main.py
-Defineste dataseturile, dataloaderele, transformatile si hiperparametrii antrenamentului. Ruleaza antrenamentul si evalueaza modelul.
+Defineste dataseturile, dataloaderele, transformarile si hiperparametrii antrenamentului. Ruleaza antrenamentul si evalueaza modelul.
 
 ## plot.py
 Contine functii pentru plotatul rezultatelor.
