@@ -1,6 +1,0 @@
-Using device: cuda
-/opt/conda/lib/python3.11/site-packages/torch/optim/lr_scheduler.py:62: UserWarning: The verbose parameter is deprecated. Please use get_last_lr() to access the learning rate.
-  warnings.warn(
-Epoch 1/20
-----------------------------------------
-Training Epoch 1/20:  32%|██████████████████████████████▊                                                                | 436/1346 [11:34<24:02,  1.58s/it, loss=0.373]
