@@ -1,0 +1,20 @@
+# Core deep learning framework
+torch==2.1.0
+torchvision==0.16.0
+torchaudio==2.1.0
+
+# Optimization and LR scheduling
+torch-tune==0.0.3  # Needed for get_cosine_schedule_with_warmup
+
+# Data processing
+numpy==1.23.5
+pandas==1.5.3
+scikit-learn==1.2.2
+matplotlib==3.7.1
+seaborn==0.12.2
+
+# Progress bar
+tqdm==4.64.1
+
+# Avoid warnings and improve efficiency
+torchmetrics==0.11.4
