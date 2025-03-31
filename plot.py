@@ -2,6 +2,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 from sklearn.metrics import roc_curve, auc, f1_score, classification_report, confusion_matrix
+import matplotlib.pyplot as plt
+import torchvision.transforms.functional as TF
+import os
+from PIL import Image
+import torch
 
 # 7. Visualization Functions
 def plot_learning_curves(history, filename_prefix="learning_curves"):
@@ -131,3 +136,41 @@ def find_optimal_threshold(results, filename_prefix="threshold_analysis"):
         f.write(report)
 
     return best_threshold
+
+
+def show_augmented_image(dataset, idx=0):
+    """
+    Displays the original and augmented version of the image at index `idx` from a MURADataset.
+    """
+    # Get study path
+    study_path = dataset.data.iloc[idx]['path']
+    image_file = sorted([
+        f for f in os.listdir(study_path)
+        if f.lower().endswith(('.png', '.jpg', '.jpeg')) and not f.startswith('.')
+    ])[0]  # pick first valid image
+
+    image_path = os.path.join(study_path, image_file)
+    image = Image.open(image_path).convert('RGB')
+
+    # Apply transform
+    augmented = dataset.transform(image)
+
+    # Undo normalization to visualize
+    mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
+    std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
+    unnormalized = augmented * std + mean
+    unnormalized = torch.clamp(unnormalized, 0, 1)
+
+    # Plot original and augmented image
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    axes[0].imshow(image)
+    axes[0].set_title("Original Image")
+    axes[0].axis("off")
+
+    axes[1].imshow(unnormalized.permute(1, 2, 0).numpy())
+    axes[1].set_title("Augmented Image")
+    axes[1].axis("off")
+
+    plt.tight_layout()
+    plt.show()
+

@@ -13,6 +13,9 @@ from train import MURAClassifier, FocalLoss, train_model, evaluate_model, visual
 import random
 import os
 import pandas as pd 
+from plot import plot_learning_curves, show_augmented_image
+import wandb
+
 # from torchtune.modules import get_cosine_schedule_with_warmup 
 
 import torch
@@ -59,14 +62,32 @@ def make_training_deterministic(seed=42):
     except AttributeError:
         print("Warning: torch.use_deterministic_algorithms not supported in this PyTorch version")
 
-def main(threshold=0.5, agg_type='prob_mean', alpha=0.75, gamma=2.0, num_epochs=50, seed=42):
+def main(backbone='densenet169', threshold=0.5, lr=0.0001, batch_size=8, agg_type='prob_mean', alpha=0.75, gamma=2.0, num_epochs=50, seed=42):
+
+    wandb.init(
+        project="mura-fracture-detection",
+        config={
+            "architecture": backbone,
+            "aggregation": agg_type,
+            "threshold": threshold,
+            "lr": lr,
+            "batch_size": batch_size,
+            "loss_fn": "Weighted BCE",
+            "scheduler": "ReduceLROnPlateau",
+            "num_epochs": num_epochs,
+            "seed": seed,
+            "alpha": alpha,
+            "gamma": gamma
+        }
+    )
+
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    train_csv = "processed_all_train.csv"
-    valid_csv = "processed_all_valid.csv"
-    test_csv = "processed_all_test.csv"
+    train_csv = "csv_files/processed_all_train.csv"
+    valid_csv = "csv_files/processed_all_valid.csv"
+    test_csv = "csv_files/processed_all_test.csv"
 
     make_training_deterministic(seed)
 
@@ -92,7 +113,7 @@ def main(threshold=0.5, agg_type='prob_mean', alpha=0.75, gamma=2.0, num_epochs=
     # Create data loaders
     train_loader = DataLoader(
         train_dataset,
-        batch_size=8,
+        batch_size=batch_size,
         num_workers=4,   
         collate_fn=custom_collate,
         pin_memory=True,
@@ -102,7 +123,7 @@ def main(threshold=0.5, agg_type='prob_mean', alpha=0.75, gamma=2.0, num_epochs=
 
     val_loader = DataLoader(
         val_dataset,
-        batch_size=8,
+        batch_size=batch_size,
         shuffle=False,
         num_workers=4,    
         collate_fn=custom_collate,
@@ -111,25 +132,26 @@ def main(threshold=0.5, agg_type='prob_mean', alpha=0.75, gamma=2.0, num_epochs=
 
     test_loader = DataLoader(
         test_dataset,
-        batch_size=8,
+        batch_size=batch_size,
         shuffle=False,
         num_workers=4, 
         collate_fn=custom_collate,
         pin_memory=True
     )
 
+
     # When creating the model:
-    model = MURAClassifier(backbone='densenet169', pretrained=True, agg_strategy=agg_type, threshold=threshold)
+    model = MURAClassifier(backbone=backbone, pretrained=True, agg_strategy=agg_type, threshold=threshold)
     model = model.to(device)
 
     # Compute class weights from training data
-    class_weights = compute_class_weights("processed_all_train.csv").to(device)
+    class_weights = compute_class_weights(train_csv).to(device)
     
     # Define Weighted BCE Loss
     criterion = nn.BCEWithLogitsLoss(pos_weight=class_weights[1])  # pos_weight applies weight to class 1
 
     # Use lower learning rate with weight decay
-    optimizer = optim.Adam(model.parameters(), lr=0.0001, betas=(0.9, 0.999))
+    optimizer = optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.999))
 
     # # Learning rate scheduler
     # scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -164,11 +186,20 @@ def main(threshold=0.5, agg_type='prob_mean', alpha=0.75, gamma=2.0, num_epochs=
     print(f"AUC: {test_results['auc']:.4f}")
     print(f"F1 Score: {test_results['f1']:.4f}")
 
+
     # Visualize results
     visualize_results(test_results)
 
     # Find optimal threshold
     best_threshold = find_optimal_threshold(test_results)
+
+    wandb.log({
+        "Test Loss": test_results['loss'],
+        "Test Accuracy": test_results['acc'],
+        "Test AUC": test_results['auc'],
+        "Test F1": test_results['f1'],
+        "Best Threshold": best_threshold
+    })
 
     # Save the model
     torch.save(model, f'mura_model_{agg_type}_seed{seed}.pth')  # Saves full model

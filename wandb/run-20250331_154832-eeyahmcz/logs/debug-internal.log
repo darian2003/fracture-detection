@@ -1,0 +1,7 @@
+{"time":"2025-03-31T15:48:32.205124833+03:00","level":"INFO","msg":"stream: starting","core version":"0.19.8","symlink path":"/export/home/acs/stud/d/darian.balagiu/proiect-licenta/wandb/run-20250331_154832-eeyahmcz/logs/debug-core.log"}
+{"time":"2025-03-31T15:48:32.319046183+03:00","level":"INFO","msg":"created new stream","id":"eeyahmcz"}
+{"time":"2025-03-31T15:48:32.319098893+03:00","level":"INFO","msg":"stream: started","id":"eeyahmcz"}
+{"time":"2025-03-31T15:48:32.319115164+03:00","level":"INFO","msg":"writer: Do: started","stream_id":"eeyahmcz"}
+{"time":"2025-03-31T15:48:32.319135222+03:00","level":"INFO","msg":"handler: started","stream_id":"eeyahmcz"}
+{"time":"2025-03-31T15:48:32.319165119+03:00","level":"INFO","msg":"sender: started","stream_id":"eeyahmcz"}
+{"time":"2025-03-31T15:48:32.608532195+03:00","level":"INFO","msg":"Starting system monitor"}

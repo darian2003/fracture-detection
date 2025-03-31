@@ -39,19 +39,11 @@ class MURAClassifier(nn.Module):
         # Aggregation strategy
         self.agg_strategy = agg_strategy
 
-        # Improved classifier with multiple layers
         self.classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Dropout(0.25),
-            nn.Linear(self.num_features, 512),
-            nn.LayerNorm(512),
-            nn.ReLU(),
-            nn.Dropout(0.15),
-            nn.Linear(512, 128),
-            nn.LayerNorm(128),
-            nn.ReLU(),
-            nn.Linear(128, 1)
+            nn.Linear(self.num_features, 1), 
         )
+
 
     def forward_single_image(self, x):
         """Forward pass for a single image returning the logit"""
@@ -82,19 +74,19 @@ class MURAClassifier(nn.Module):
             # Process each image to get abnormality probabilities
             image_logits = []
             for img in study_images:
-                img = img.unsqueeze(0)  # Add batch dimension
+                img = img.unsqueeze(0).to(device)  # Add batch dimension
                 logit = self.forward_single_image(img)
                 image_logits.append(logit)
 
             # Stack all image logits
             image_logits = torch.cat(image_logits, dim=0)  # [num_images, 1]
-            print(f'Stacked logits: {image_logits}')
 
             # Apply aggregation strategy on logits (before sigmoid)
             if self.agg_strategy == 'prob_mean':
                 # Convert to probabilities first, then mean
                 image_probs = torch.sigmoid(image_logits)
                 study_prob = torch.mean(image_probs, dim=0, keepdim=True)
+                
                 # Convert back to logit for BCEWithLogitsLoss
                 study_output = torch.log(study_prob / (1 - study_prob + 1e-7))
 
@@ -218,7 +210,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
 
         # Model saving
         if val_loss < best_val_loss:
-            best_val_loss = valx_loss
+            best_val_loss = val_loss
             best_model_wts = model.state_dict().copy()
             best_val_metrics = val_metrics.copy()
 
