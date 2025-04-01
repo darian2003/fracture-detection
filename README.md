@@ -1,15 +1,9 @@
 # Descriere proiect
 
-## preprocess.py
-Este un script folosit o singura data pentru a crea fisierele .csv din directorul csv_files.
-
-## dataset.py
-Defineste clasa de Dataset si functia collate_fn care rezolva inconsistenta studiilor cu numar variabil de imagini.
-
 ## train.py
-Defineste modelul folosit si functiile de antrenare/evaluare. In cazul baseline-ului (care este copiat din studiul MURA atasat), se foloseste:
+Defineste modelul folosit si functiile de antrenare/evaluare. In cazul baseline-ului configuratia este copiata din studiul MURA atasat (sectiunea 3) si presupune:
 - Backbone: Densenet169 preantrenat pe ImageNet
-- Augmentari: Inversii laterale si rotatii de maxim 30 grade
+- Augmentari: Inversari laterale si rotatii de maxim 30 grade
 - Batch Size: 8
 - Metoda de predictie: Prob Mean (fiecare imagine dintr-un studiu genereaza o probabilitate, iar apoi media probabilitatilor imaginilor dintr-un studiu reprezinta predictia finala)
 - Loss: WBCE (implementat cu Focal Loss)
@@ -24,5 +18,11 @@ Defineste dataseturile, dataloaderele, transformarile si hiperparametrii antrena
 
 ## plot.py
 Contine functii pentru plotatul rezultatelor.
+
+## preprocess.py
+Este un script folosit o singura data pentru a crea fisierele .csv din directorul csv_files.
+
+## dataset.py
+Defineste clasa de Dataset si functia collate_fn care rezolva inconsistenta studiilor cu numar variabil de imagini.
 
 
