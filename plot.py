@@ -46,7 +46,7 @@ def plot_learning_curves(history, filename_prefix="learning_curves"):
     axes[1, 1].legend()
 
     plt.tight_layout()
-    plt.savefig(f"{filename_prefix}.png")
+    plt.savefig(f"results/{filename_prefix}.png")
     plt.close(fig)  # Prevent excessive memory use
 
 def visualize_results(results, filename_prefix="results"):
@@ -62,7 +62,7 @@ def visualize_results(results, filename_prefix="results"):
     ax.set_title('Confusion Matrix')
     ax.set_xlabel('Predicted')
     ax.set_ylabel('True')
-    plt.savefig(f"{filename_prefix}_confusion_matrix.png")
+    plt.savefig(f"results/{filename_prefix}_confusion_matrix.png")
     plt.close(fig)
 
     # ROC Curve
@@ -75,7 +75,7 @@ def visualize_results(results, filename_prefix="results"):
     ax.set_xlabel('False Positive Rate')
     ax.set_ylabel('True Positive Rate')
     ax.legend()
-    plt.savefig(f"{filename_prefix}_roc_curve.png")
+    plt.savefig(f"results/{filename_prefix}_roc_curve.png")
     plt.close(fig)
 
     # Prediction Distribution
@@ -87,12 +87,12 @@ def visualize_results(results, filename_prefix="results"):
     ax.set_xlabel('Predicted Probability')
     ax.set_ylabel('Count')
     ax.legend()
-    plt.savefig(f"{filename_prefix}_prediction_distribution.png")
+    plt.savefig(f"results/{filename_prefix}_prediction_distribution.png")
     plt.close(fig)
 
     # Classification Report
     report = classification_report(y_true, y_pred, target_names=['Normal', 'Abnormal'])
-    with open(f"{filename_prefix}_classification_report.txt", "w") as f:
+    with open(f"results/{filename_prefix}_classification_report.txt", "w") as f:
         f.write(report)
 
     print("Saved all results and plots.")
@@ -124,7 +124,7 @@ def find_optimal_threshold(results, filename_prefix="threshold_analysis"):
     ax.set_ylabel('F1 Score')
     ax.legend()
     ax.grid(True)
-    plt.savefig(f"{filename_prefix}_threshold_vs_f1.png")
+    plt.savefig(f"results/{filename_prefix}_threshold_vs_f1.png")
     plt.close(fig)
 
     print(f"Optimal threshold: {best_threshold:.3f} with F1 score: {best_f1:.3f}")
@@ -132,7 +132,7 @@ def find_optimal_threshold(results, filename_prefix="threshold_analysis"):
     # Save classification report with new threshold
     optimal_preds = (y_probs > best_threshold).astype(int)
     report = classification_report(y_true, optimal_preds, target_names=['Normal', 'Abnormal'])
-    with open(f"{filename_prefix}_optimal_classification_report.txt", "w") as f:
+    with open(f"results/{filename_prefix}_optimal_classification_report.txt", "w") as f:
         f.write(report)
 
     return best_threshold
