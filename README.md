@@ -16,6 +16,9 @@ Defineste modelul folosit si functiile de antrenare/evaluare. In cazul baseline-
 - Optimizator: Adam(model.parameters(), lr=0.0001, betas=(0.9, 0.999))
 - Scheduler: ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2, verbose=True)
 
+  Pentru fiecare batch, se adauga imagini de padding studiilor cu numar mai mic de imagini astfel incat toate sa aiba aceeasi dimensiune si sa poata fi procesate in parelel.
+  La final, predictia este agregata cu ajtorul unei masti de padding (daca studiul contine 3 imagini originale si 2 de padding, masca este [1,1,1,0,0]).
+
 ## main.py
 Defineste dataseturile, dataloaderele, transformarile si hiperparametrii antrenamentului. Ruleaza antrenamentul si evalueaza modelul.
 
