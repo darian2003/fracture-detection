@@ -114,7 +114,7 @@ def main(backbone='densenet169', threshold=0.5, lr=0.0001, batch_size=8, agg_typ
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
-        num_workers=4,   
+        num_workers=8,   
         collate_fn=custom_collate,
         pin_memory=True,
         worker_init_fn=None,
@@ -125,7 +125,7 @@ def main(backbone='densenet169', threshold=0.5, lr=0.0001, batch_size=8, agg_typ
         val_dataset,
         batch_size=batch_size,
         shuffle=False,
-        num_workers=4,    
+        num_workers=8,    
         collate_fn=custom_collate,
         pin_memory=True
     )
@@ -134,7 +134,7 @@ def main(backbone='densenet169', threshold=0.5, lr=0.0001, batch_size=8, agg_typ
         test_dataset,
         batch_size=batch_size,
         shuffle=False,
-        num_workers=4, 
+        num_workers=8, 
         collate_fn=custom_collate,
         pin_memory=True
     )
@@ -160,8 +160,7 @@ def main(backbone='densenet169', threshold=0.5, lr=0.0001, batch_size=8, agg_typ
 
     # scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=256, num_training_steps=num_epochs*len(train_loader))
 
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2, verbose=True)
-    
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=3, verbose=True)
 
     # Train model
     model, best_val_metrics, history = train_model(
@@ -194,7 +193,7 @@ def main(backbone='densenet169', threshold=0.5, lr=0.0001, batch_size=8, agg_typ
     best_threshold = find_optimal_threshold(test_results)
 
     wandb.log({
-        "Test Loss": test_results['loss'],
+        "Train Loss": test_results['loss'],
         "Test Accuracy": test_results['acc'],
         "Test AUC": test_results['auc'],
         "Test F1": test_results['f1'],
@@ -209,4 +208,5 @@ def main(backbone='densenet169', threshold=0.5, lr=0.0001, batch_size=8, agg_typ
 
 
 if __name__ == "__main__":
-    model, test_results, best_threshold = main(threshold=0.5, agg_type='prob_mean', alpha=0.75, gamma=2.0, num_epochs=20, seed=42)
+    torch.multiprocessing.set_start_method('spawn')
+    model, test_results, best_threshold = main(threshold=0.4, agg_type='prob_mean', alpha=0.75, gamma=2.0, num_epochs=30, seed=42)

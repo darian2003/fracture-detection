@@ -5,6 +5,8 @@ from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 import torchvision.transforms as transforms
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 class MURADataset(Dataset):
     def __init__(self, csv_file, transform=None):
         self.data = pd.read_csv(csv_file)
@@ -64,26 +66,15 @@ class MURADataset(Dataset):
             'num_images': len(images)
         }
 
-# Custom collate function to handle variable number of images per study
 def custom_collate(batch):
-    """
-    Custom collate function to handle variable number of images per study
-    """
     paths = [item['path'] for item in batch]
     labels = torch.stack([item['label'] for item in batch])
-    body_parts = [item['body_part'] for item in batch]
-    body_part_classes = torch.stack([item['class'] for item in batch])
     num_images = [item['num_images'] for item in batch]
-
-    # The images are already tensors of varying first dimensions
-    # We don't stack them, but return them as a list
     images = [item['images'] for item in batch]
-
+    
     return {
         'path': paths,
-        'images': images,  # List of tensors, each of shape [num_images, C, H, W]
+        'images': images,
         'label': labels,
-        'body_part': body_parts,
-        'class': body_part_classes,
         'num_images': num_images
     }

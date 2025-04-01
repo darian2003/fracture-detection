@@ -12,6 +12,7 @@ from plot import plot_learning_curves, visualize_results, find_optimal_threshold
 from sklearn.metrics import roc_auc_score, f1_score, accuracy_score
 from sklearn.metrics import confusion_matrix
 import torch.nn.functional as F
+import wandb
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -44,67 +45,119 @@ class MURAClassifier(nn.Module):
             nn.Linear(self.num_features, 1), 
         )
 
-
-    def forward_single_image(self, x):
-        """Forward pass for a single image returning the logit"""
-
+    def forward_batch(self, x):
+        """Forward pass for a batch of images"""
+        # x shape: [batch_size, channels, height, width]
         features = self.feature_extractor(x)
-
-        # Pooling because the output is [B, C, 10, 10]
-        if self.backbone_name == 'densenet169':
-            features = F.adaptive_avg_pool2d(features, (1, 1))  # [B, C, 1, 1]
         
-        features = torch.flatten(features, 1)  # Flatten to [B, C]
+        # Pooling for DenseNet
+        if self.backbone_name == 'densenet169':
+            features = F.adaptive_avg_pool2d(features, (1, 1))
+            
+        # Apply classifier
         logits = self.classifier(features)
-
         return logits
 
     def forward(self, x_list):
         """
-        Forward pass handling variable number of images per study
-        First computes abnormality probability for each image, then aggregates
+        Forward pass with optimized GPU usage using padding and masking
+        
+        Args:
+            x_list: List of tensors, each of shape [num_images, channels, height, width]
         """
         batch_size = len(x_list)
         all_study_outputs = []
 
+        # Find max number of images in any study in this batch
+        max_images = max([study.size(0) for study in x_list])
+        
+        # Create padded batch tensor and mask
+        batch_tensor_list = []
+        mask_list = []
+        
+        for study_images in x_list:
+            num_images = study_images.size(0)
+            
+            # Create mask (1 for real images, 0 for padding)
+            mask = torch.zeros(max_images, 1, device=device)
+            mask[:num_images] = 1
+            
+            # Handle padding if needed
+            if num_images < max_images:
+                # Create padding
+                padding = torch.zeros(
+                    max_images - num_images, 
+                    study_images.size(1), 
+                    study_images.size(2), 
+                    study_images.size(3), 
+                    device=device
+                )
+                padded_study = torch.cat([study_images, padding], dim=0)
+            else:
+                padded_study = study_images
+                
+            batch_tensor_list.append(padded_study.unsqueeze(0))  # Add batch dimension
+            mask_list.append(mask.unsqueeze(0))  # Add batch dimension
+            
+        # Concatenate all studies into a single batch
+        # Shape: [batch_size, max_images, channels, height, width]
+        padded_batch = torch.cat(batch_tensor_list, dim=0)
+        # Shape: [batch_size, max_images, 1]
+        masks = torch.cat(mask_list, dim=0)
+        
+        # Reshape for efficient processing
+        # Shape: [batch_size * max_images, channels, height, width]
+        batch_images = padded_batch.view(-1, padded_batch.size(2), padded_batch.size(3), padded_batch.size(4))
+        
+        # Process all images at once (major GPU optimization)
+        batch_logits = self.forward_batch(batch_images)
+        
+        # Reshape back to [batch_size, max_images, 1]
+        batch_logits = batch_logits.view(batch_size, max_images, -1)
+        
+        # Apply mask to zero out padding predictions
+        batch_logits = batch_logits * masks
+        
+        # Now apply aggregation strategy on the masked predictions
         for i in range(batch_size):
-            # Get images for this study
-            study_images = x_list[i].to(device)
-
-            # Process each image to get abnormality probabilities
-            image_logits = []
-            for img in study_images:
-                img = img.unsqueeze(0).to(device)  # Add batch dimension
-                logit = self.forward_single_image(img)
-                image_logits.append(logit)
-
-            # Stack all image logits
-            image_logits = torch.cat(image_logits, dim=0)  # [num_images, 1]
-
+            study_logits = batch_logits[i]
+            study_mask = masks[i]
+            
+            # Count number of real images (non-padded)
+            num_real_images = study_mask.sum().item()
+            
             # Apply aggregation strategy on logits (before sigmoid)
             if self.agg_strategy == 'prob_mean':
-                # Convert to probabilities first, then mean
-                image_probs = torch.sigmoid(image_logits)
-                study_prob = torch.mean(image_probs, dim=0, keepdim=True)
+                # Convert to probabilities
+                image_probs = torch.sigmoid(study_logits)
+                
+                # Compute sum and divide by number of real images
+                # (exclude padding from the calculation)
+                study_prob = image_probs.sum() / num_real_images
                 
                 # Convert back to logit for BCEWithLogitsLoss
-                study_output = torch.log(study_prob / (1 - study_prob + 1e-7))
+                study_prob = torch.clamp(study_prob, min=1e-6, max=1-1e-6)  # Stronger clamping
+                study_output = torch.log(study_prob / (1 - study_prob))
+                study_output = study_output.unsqueeze(0)  # Add dimension back
 
             elif self.agg_strategy == 'prob_max':
-                # Convert to probabilities first, then max
-                image_probs = torch.sigmoid(image_logits)
-                study_prob = torch.max(image_probs, dim=0, keepdim=True)[0]
-                # Convert back to logit for BCEWithLogitsLoss
+                # For max aggregation, the mask already zeroed out padding
+                # so we can safely take max over all values
+                image_probs = torch.sigmoid(study_logits)
+                study_prob = torch.max(image_probs)
+                
+                # Convert back to logit
                 study_output = torch.log(study_prob / (1 - study_prob + 1e-7))
-
+                study_output = study_output.unsqueeze(0)
+                
             else:
                 raise ValueError(f"Unsupported aggregation strategy: {self.agg_strategy}")
-
+                
             all_study_outputs.append(study_output)
+            
+        # Stack all study outputs
+        return torch.cat(all_study_outputs, dim=0).unsqueeze(1) 
 
-        return torch.cat(all_study_outputs, dim=0)
-
-# 4. Focal Loss for better handling of class imbalance
 class FocalLoss(nn.Module):
     def __init__(self, alpha=0.75, gamma=2.0):
         super(FocalLoss, self).__init__()
@@ -112,10 +165,25 @@ class FocalLoss(nn.Module):
         self.gamma = gamma
 
     def forward(self, inputs, targets):
-        bce_loss = nn.BCEWithLogitsLoss(reduction='none')(inputs, targets.view(-1, 1))
+        # Ensure inputs has shape [batch_size, 1]
+        if inputs.dim() == 1:
+            inputs = inputs.unsqueeze(1)
+            
+        # Ensure targets has shape [batch_size, 1]
+        targets_view = targets.view(-1, 1)
+        
+        # Calculate BCE loss
+        bce_loss = nn.BCEWithLogitsLoss(reduction='none')(inputs, targets_view)
+        
+        # Calculate focusing factor
         pt = torch.exp(-bce_loss)
-        alpha_factor = self.alpha * targets + (1 - self.alpha) * (1 - targets)
+        
+        # Apply alpha weighting with properly shaped targets
+        alpha_factor = self.alpha * targets_view + (1 - self.alpha) * (1 - targets_view)
+        
+        # Calculate focal loss
         focal_loss = alpha_factor * (1 - pt) ** self.gamma * bce_loss
+        
         return focal_loss.mean()
 
 # 5. Training Function
@@ -145,8 +213,8 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
         # Progress bar for training
         pbar = tqdm(train_loader, desc=f"Training Epoch {epoch+1}/{num_epochs}")
         for batch in pbar:
-            images_list = batch['images']
             labels = batch['label'].to(device)
+            images_list = [imgs.to(device) for imgs in batch['images']]
 
             # Zero gradients
             optimizer.zero_grad()
@@ -204,6 +272,18 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
         history['val_auc'].append(val_auc)
         history['val_f1'].append(val_f1)
 
+        wandb.log({
+            "Train/Loss": train_loss,
+            "Train/Accuracy": train_acc,
+            "Train/AUC": train_auc,
+            "Train/F1": train_f1,
+            "Val/Loss": val_loss,
+            "Val/Accuracy": val_acc,
+            "Val/AUC": val_auc,
+            "Val/F1": val_f1,
+            "epoch": epoch
+        })
+
         # Print metrics
         print(f"Train Loss: {train_loss:.4f}, Acc: {train_acc:.4f}, AUC: {train_auc:.4f}, F1: {train_f1:.4f}")
         print(f"Val Loss: {val_loss:.4f}, Acc: {val_acc:.4f}, AUC: {val_auc:.4f}, F1: {val_f1:.4f}")
@@ -236,7 +316,7 @@ def evaluate_model(model, data_loader, criterion, device='cuda', threshold=0.5):
 
     with torch.no_grad():
         for batch in data_loader:
-            images_list = batch['images']
+            images_list = [imgs.to(device) for imgs in batch['images']]
             labels = batch['label'].to(device)
 
             # Forward pass
