@@ -6,7 +6,7 @@ Defineste modelul folosit si functiile de antrenare/evaluare. In cazul baseline-
 - Augmentari: Inversari laterale si rotatii de maxim 30 grade
 - Batch Size: 8
 - Metoda de predictie: Prob Mean (fiecare imagine dintr-un studiu genereaza o probabilitate, iar apoi media probabilitatilor imaginilor dintr-un studiu reprezinta predictia finala)
-- Loss: WBCE (implementat cu Focal Loss)
+- Loss: WBCE 
 - Optimizator: Adam(model.parameters(), lr=0.0001, betas=(0.9, 0.999))
 - Scheduler: ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2, verbose=True)
 
