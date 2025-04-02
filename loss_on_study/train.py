@@ -147,9 +147,8 @@ class MURAClassifier(nn.Module):
                 study_prob = torch.max(image_probs)
                 
                 # Convert back to logit
-                study_prob = torch.clamp(study_prob, min=1e-6, max=1-1e-6)  # Avoid log(0)
-                study_output = torch.log(study_prob / (1 - study_prob))
-                study_output = study_output.unsqueeze(0)  # Add dimension back
+                study_output = torch.log(study_prob / (1 - study_prob + 1e-7))
+                study_output = study_output.unsqueeze(0)
                 
             else:
                 raise ValueError(f"Unsupported aggregation strategy: {self.agg_strategy}")
@@ -157,7 +156,7 @@ class MURAClassifier(nn.Module):
             all_study_outputs.append(study_output)
             
         # Stack all study outputs
-        return torch.cat(all_study_outputs, dim=0).unsqueeze(1), batch_logits, masks
+        return torch.cat(all_study_outputs, dim=0).unsqueeze(1) 
 
 class FocalLoss(nn.Module):
     def __init__(self, alpha=0.75, gamma=2.0):
@@ -242,29 +241,9 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
             # Zero gradients
             optimizer.zero_grad()
 
-
-            """ Individual Image Forward Pass """
-
             # Forward pass
-            outputs, image_logits, masks = model(images_list)
-
-            # Expand labels to match image count
-            labels_expanded = labels.view(-1, 1, 1).expand_as(image_logits)  # shape: [batch_size, max_images, 1]
-
-            # Flatten everything and apply mask
-            flat_logits = image_logits.view(-1, 1)
-            flat_labels = labels_expanded.reshape(-1, 1)
-            flat_mask = masks.view(-1, 1)
-
-            # Filter valid (non-padded) image logits
-            valid_logits = flat_logits[flat_mask.bool()]
-            valid_labels = flat_labels[flat_mask.bool()]
-
-            # Compute per-image loss
-            loss = criterion(valid_logits, valid_labels)
-
-            """ ---------- End of Individual Image Forward Pass ---------- """
-
+            outputs = model(images_list)
+            loss = criterion(outputs, labels.view(-1, 1))
 
             # Backward pass
             loss.backward()
@@ -363,18 +342,8 @@ def evaluate_model(model, data_loader, criterion, device='cuda', threshold=0.5):
             labels = batch['label'].to(device)
 
             # Forward pass
-            outputs, image_logits, masks = model(images_list)
-            labels_expanded = labels.view(-1, 1, 1).expand_as(image_logits)
-
-            flat_logits = image_logits.view(-1, 1)
-            flat_labels = labels_expanded.reshape(-1, 1)
-            flat_mask = masks.view(-1, 1)
-
-            valid_logits = flat_logits[flat_mask.bool()]
-            valid_labels = flat_labels[flat_mask.bool()]
-
-            loss = criterion(valid_logits, valid_labels)
-
+            outputs = model(images_list)
+            loss = criterion(outputs, labels.view(-1, 1))
 
             # Track metrics
             val_loss += loss.item() * len(labels)
