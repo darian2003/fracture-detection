@@ -3,7 +3,7 @@
 ## train.py
 Defineste modelul folosit si functiile de antrenare/evaluare. In cazul baseline-ului configuratia este copiata din studiul MURA atasat (sectiunea 3) si presupune:
 - Backbone: Densenet169 preantrenat pe ImageNet
-- Augmentari: Inversari laterale si rotatii de maxim 30 grade
+- Augmentari: Inversari laterale si rotatii de maxim 30 grade si redimensionare la 320x320
 - Batch Size: 8
 - Metoda de predictie: Prob Mean (fiecare imagine dintr-un studiu genereaza o probabilitate, iar apoi media probabilitatilor imaginilor dintr-un studiu reprezinta predictia finala)
 - Loss: WBCE 
