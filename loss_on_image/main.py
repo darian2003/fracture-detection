@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
+
 import torch
 import torch.optim as optim
 import numpy as np
@@ -63,7 +67,7 @@ def make_training_deterministic(seed=42):
     except AttributeError:
         print("Warning: torch.use_deterministic_algorithms not supported in this PyTorch version")
 
-def main(backbone='densenet169', threshold=0.5, lr=0.0001, batch_size=8, agg_type='prob_mean', alpha=0.75, gamma=2.0, num_epochs=50, seed=42):
+def main(backbone='densenet169', threshold=0.5, lr=0.0001, batch_size=8, agg_type='prob_mean', alpha=0.75, gamma=2.0, num_epochs=20, patience=3, seed=42):
 
     wandb.init(
         project="mura-fracture-detection",
@@ -78,7 +82,8 @@ def main(backbone='densenet169', threshold=0.5, lr=0.0001, batch_size=8, agg_typ
             "num_epochs": num_epochs,
             "seed": seed,
             "alpha": alpha,
-            "gamma": gamma
+            "gamma": gamma,
+            "patience": patience
         }
     )
 
@@ -86,9 +91,9 @@ def main(backbone='densenet169', threshold=0.5, lr=0.0001, batch_size=8, agg_typ
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    train_csv = "csv_files/processed_all_train.csv"
-    valid_csv = "csv_files/processed_all_valid.csv"
-    test_csv = "csv_files/processed_all_test.csv"
+    train_csv = "../csv_files/processed_all_train.csv"
+    valid_csv = "../csv_files/processed_all_valid.csv"
+    test_csv = "../csv_files/processed_all_test.csv"
 
     make_training_deterministic(seed)
 
@@ -107,9 +112,9 @@ def main(backbone='densenet169', threshold=0.5, lr=0.0001, batch_size=8, agg_typ
     ])
 
 
-    train_dataset = MURADataset(csv_file=train_csv, transform=train_transform)
-    val_dataset = MURADataset(csv_file=valid_csv, transform=val_transform)
-    test_dataset = MURADataset(csv_file=test_csv, transform=val_transform)
+    train_dataset = MURADataset(csv_file=train_csv, transform=train_transform, base_path="../")
+    val_dataset = MURADataset(csv_file=valid_csv, transform=val_transform, base_path="../")
+    test_dataset = MURADataset(csv_file=test_csv, transform=val_transform, base_path="../")
 
     # Create data loaders
     train_loader = DataLoader(
@@ -164,7 +169,7 @@ def main(backbone='densenet169', threshold=0.5, lr=0.0001, batch_size=8, agg_typ
 
     # scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=256, num_training_steps=num_epochs*len(train_loader))
 
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=3, verbose=True)
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=patience, verbose=True)
 
     # Train model
     model, best_val_metrics, history = train_model(
@@ -213,4 +218,4 @@ def main(backbone='densenet169', threshold=0.5, lr=0.0001, batch_size=8, agg_typ
 
 if __name__ == "__main__":
     torch.multiprocessing.set_start_method('spawn')
-    model, test_results, best_threshold = main(threshold=0.4, agg_type='prob_mean', alpha=0.75, gamma=2.0, num_epochs=30, seed=42)
+    model, test_results, best_threshold = main(backbone='resnet50', threshold=0.5, agg_type='prob_mean', alpha=0.75, gamma=2.0, num_epochs=20, patience=3, seed=42)

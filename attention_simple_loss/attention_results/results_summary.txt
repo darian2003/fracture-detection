@@ -1,0 +1,27 @@
+=== MURA Classification Results ===
+
+Accuracy: 0.8198
+AUC: 0.8893
+F1 Score: 0.7861
+
+=== Attention Analysis ===
+
+Total studies analyzed: 1199
+Normal studies accuracy: 0.8865
+Abnormal studies accuracy: 0.7379
+Avg attention variance (correct): 0.0034
+Avg attention variance (wrong): 0.0052
+
+=== Study Size Analysis ===
+
+Study Size | Overall Accuracy | Normal Accuracy | Abnormal Accuracy
+--------------------------------------------------------------
+    1      |      0.8416      |     0.8718      |      0.7391     
+    2      |      0.7961      |     0.8658      |      0.7072     
+    3      |      0.8298      |     0.9123      |      0.7284     
+    4      |      0.8296      |     0.8730      |      0.7917     
+    5      |      0.8333      |     0.7500      |      0.8462     
+    6      |      1.0000      |     0.0000      |      1.0000     
+    7      |      1.0000      |     0.0000      |      1.0000     
+    8      |      1.0000      |     0.0000      |      1.0000     
+    10     |      1.0000      |     0.0000      |      1.0000     

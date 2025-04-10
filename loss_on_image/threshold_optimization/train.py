@@ -1,3 +1,8 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -8,7 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from tqdm import tqdm
-from ..plot import plot_learning_curves, visualize_results, find_optimal_threshold
+from plot import plot_learning_curves, visualize_results, find_optimal_threshold
 from sklearn.metrics import roc_auc_score, f1_score, accuracy_score
 from sklearn.metrics import confusion_matrix
 import torch.nn.functional as F
@@ -297,6 +302,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
         val_acc = val_metrics['acc']
         val_auc = val_metrics['auc']
         val_f1 = val_metrics['f1']
+        val_probs = val_metrics['probs']
 
         # LR Scheduler step (if not None)
         if scheduler is not None:
@@ -324,6 +330,8 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
             "Val/Accuracy": val_acc,
             "Val/AUC": val_auc,
             "Val/F1": val_f1,
+            "Train/Probabilities": wandb.Histogram(train_probs),
+            "Val/Probabilities": wandb.Histogram(val_probs),
             "epoch": epoch
         })
 

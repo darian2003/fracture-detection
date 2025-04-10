@@ -9,8 +9,17 @@ from PIL import Image
 import torch
 
 # 7. Visualization Functions
-def plot_learning_curves(history, filename_prefix="learning_curves"):
-    """Plot training and validation metrics and save the figures."""
+def plot_learning_curves(history, output_dir="results", filename_prefix="learning_curves"):
+    """Plot training and validation metrics and save the figures.
+    
+    Args:
+        history: Dictionary containing training and validation metrics.
+        output_dir: Directory where plots will be saved.
+        filename_prefix: Prefix for the saved plot filenames.
+    """
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+    
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
 
     # Loss
@@ -46,11 +55,21 @@ def plot_learning_curves(history, filename_prefix="learning_curves"):
     axes[1, 1].legend()
 
     plt.tight_layout()
-    plt.savefig(f"results/{filename_prefix}.png")
+    save_path = os.path.join(output_dir, f"{filename_prefix}.png")
+    plt.savefig(save_path)
     plt.close(fig)  # Prevent excessive memory use
 
-def visualize_results(results, filename_prefix="results"):
-    """Visualize model results with confusion matrix, ROC curve, etc."""
+def visualize_results(results, output_dir="results", filename_prefix="results"):
+    """Visualize model results with confusion matrix, ROC curve, etc.
+    
+    Args:
+        results: Dictionary containing labels, predictions, and probabilities.
+        output_dir: Directory where plots will be saved.
+        filename_prefix: Prefix for the saved plot filenames.
+    """
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+    
     y_true = np.array(results['labels'])
     y_pred = np.array(results['preds'])
     y_probs = np.array(results['probs'])
@@ -62,7 +81,8 @@ def visualize_results(results, filename_prefix="results"):
     ax.set_title('Confusion Matrix')
     ax.set_xlabel('Predicted')
     ax.set_ylabel('True')
-    plt.savefig(f"results/{filename_prefix}_confusion_matrix.png")
+    save_path = os.path.join(output_dir, f"{filename_prefix}_confusion_matrix.png")
+    plt.savefig(save_path)
     plt.close(fig)
 
     # ROC Curve
@@ -75,7 +95,8 @@ def visualize_results(results, filename_prefix="results"):
     ax.set_xlabel('False Positive Rate')
     ax.set_ylabel('True Positive Rate')
     ax.legend()
-    plt.savefig(f"results/{filename_prefix}_roc_curve.png")
+    save_path = os.path.join(output_dir, f"{filename_prefix}_roc_curve.png")
+    plt.savefig(save_path)
     plt.close(fig)
 
     # Prediction Distribution
@@ -87,18 +108,32 @@ def visualize_results(results, filename_prefix="results"):
     ax.set_xlabel('Predicted Probability')
     ax.set_ylabel('Count')
     ax.legend()
-    plt.savefig(f"results/{filename_prefix}_prediction_distribution.png")
+    save_path = os.path.join(output_dir, f"{filename_prefix}_prediction_distribution.png")
+    plt.savefig(save_path)
     plt.close(fig)
 
     # Classification Report
     report = classification_report(y_true, y_pred, target_names=['Normal', 'Abnormal'])
-    with open(f"results/{filename_prefix}_classification_report.txt", "w") as f:
+    report_path = os.path.join(output_dir, f"{filename_prefix}_classification_report.txt")
+    with open(report_path, "w") as f:
         f.write(report)
 
-    print("Saved all results and plots.")
+    print(f"Saved all results and plots to {output_dir}.")
 
-def find_optimal_threshold(results, filename_prefix="threshold_analysis"):
-    """Find the optimal threshold for classification and save the plot."""
+def find_optimal_threshold(results, output_dir="results", filename_prefix="threshold_analysis"):
+    """Find the optimal threshold for classification and save the plot.
+    
+    Args:
+        results: Dictionary containing labels and probabilities.
+        output_dir: Directory where plots will be saved.
+        filename_prefix: Prefix for the saved plot filenames.
+        
+    Returns:
+        float: The optimal threshold value.
+    """
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+    
     y_true = np.array(results['labels'])
     y_probs = np.array(results['probs'])
 
@@ -124,7 +159,8 @@ def find_optimal_threshold(results, filename_prefix="threshold_analysis"):
     ax.set_ylabel('F1 Score')
     ax.legend()
     ax.grid(True)
-    plt.savefig(f"results/{filename_prefix}_threshold_vs_f1.png")
+    save_path = os.path.join(output_dir, f"{filename_prefix}_threshold_vs_f1.png")
+    plt.savefig(save_path)
     plt.close(fig)
 
     print(f"Optimal threshold: {best_threshold:.3f} with F1 score: {best_f1:.3f}")
@@ -132,15 +168,22 @@ def find_optimal_threshold(results, filename_prefix="threshold_analysis"):
     # Save classification report with new threshold
     optimal_preds = (y_probs > best_threshold).astype(int)
     report = classification_report(y_true, optimal_preds, target_names=['Normal', 'Abnormal'])
-    with open(f"results/{filename_prefix}_optimal_classification_report.txt", "w") as f:
+    report_path = os.path.join(output_dir, f"{filename_prefix}_optimal_classification_report.txt")
+    with open(report_path, "w") as f:
         f.write(report)
 
     return best_threshold
 
 
-def show_augmented_image(dataset, idx=0):
+def show_augmented_image(dataset, idx=0, output_dir=None, filename_prefix="augmented_image"):
     """
     Displays the original and augmented version of the image at index `idx` from a MURADataset.
+    
+    Args:
+        dataset: The dataset containing the images.
+        idx: Index of the image to display.
+        output_dir: Directory where the plot will be saved. If None, only displays the plot.
+        filename_prefix: Prefix for the saved plot filename.
     """
     # Get study path
     study_path = dataset.data.iloc[idx]['path']
@@ -172,5 +215,13 @@ def show_augmented_image(dataset, idx=0):
     axes[1].axis("off")
 
     plt.tight_layout()
+    
+    # Save the figure if output_dir is provided
+    if output_dir:
+        # Create output directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+        save_path = os.path.join(output_dir, f"{filename_prefix}.png")
+        plt.savefig(save_path)
+        print(f"Saved augmented image comparison to {save_path}")
+    
     plt.show()
-

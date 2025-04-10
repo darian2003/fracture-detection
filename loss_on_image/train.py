@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -30,7 +34,7 @@ class MURAClassifier(nn.Module):
             base_model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT if pretrained else None)
             self.feature_extractor = nn.Sequential(*list(base_model.children())[:-1])
             self.num_features = base_model.fc.in_features
-        if backbone == 'densenet169':
+        elif backbone == 'densenet169':
             base_model = models.densenet169(weights=models.DenseNet169_Weights.DEFAULT if pretrained else None)
             self.feature_extractor = base_model.features  # Use DenseNet feature extractor
             self.num_features = base_model.classifier.in_features  # Get the number of features before FC layer
@@ -297,6 +301,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
         val_acc = val_metrics['acc']
         val_auc = val_metrics['auc']
         val_f1 = val_metrics['f1']
+        val_probs = val_metrics['probs']
 
         # LR Scheduler step (if not None)
         if scheduler is not None:
@@ -324,6 +329,8 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
             "Val/Accuracy": val_acc,
             "Val/AUC": val_auc,
             "Val/F1": val_f1,
+            "Train/Probabilities": wandb.Histogram(train_probs),
+            "Val/Probabilities": wandb.Histogram(val_probs),
             "epoch": epoch
         })
 

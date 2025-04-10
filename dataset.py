@@ -8,16 +8,18 @@ import torchvision.transforms as transforms
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class MURADataset(Dataset):
-    def __init__(self, csv_file, transform=None):
+    def __init__(self, csv_file, transform=None, base_path="./"):
         self.data = pd.read_csv(csv_file)
         self.transform = transform
+        self.base_path = base_path
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
         row = self.data.iloc[idx]
-        study_path = row['path']
+        relative_path = row['path']
+        study_path = os.path.join(self.base_path, relative_path)
         
         # Extract label, body part, and class
         label = torch.tensor(row['label'], dtype=torch.float32)
